@@ -1,0 +1,8 @@
+ bool found = activeDoc.Select(originalText); // Select returns bool indicating success
+ if (!found)
+ {
+     MessageBox.Show("Could not find the exact text in the document to highlight.", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+ }
+
+
+this line giving error , error is that "Cannot implicitly convert type 'void' to 'bool' "
