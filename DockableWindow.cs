@@ -603,10 +603,14 @@ namespace AILinguistic
             try
             {
                 activeDoc.StartOperation("Highlight Text"); // Use descriptive operation name
-                bool found = activeDoc.Select(originalText); // Select returns bool indicating success
-                if (!found) {
-                     MessageBox.Show("Could not find the exact text in the document to highlight.", Title, MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                
+                // Call Select directly - it returns void
+                activeDoc.Select(originalText); 
+                
+                // We can't reliably know if Select found the text here, 
+                // so the message box warning about not finding text is removed.
+                // The user will see if the text gets selected or not.
+
                 // Optional: Change background color if API supports it and is desired
                 // activeDoc.Selection?.ChangeBackColor(System.Drawing.Color.Yellow);
                 activeDoc.UpdateView(); // Ensure selection is visible
