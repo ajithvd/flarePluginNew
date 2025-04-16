@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using B3.PluginAPIKit;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -27,14 +27,15 @@ namespace AILinguistic
             {
                 if (host == null)
                 {
-                    throw new ArgumentNullException(nameof(host), "Host can not bel null");
+                    throw new ArgumentNullException(nameof(host), "Host can not be null");
                 }
                 _host = host;
                 AddRibbonButton();
             }
             catch (Exception ex)
             {
-                ExceptionHandling.LogError($"Initialization failed : {ex}");
+                // Use the full exception details for logging
+                ExceptionHandling.LogError($"Initialization failed: {ex}");
             }
 
         }
@@ -51,7 +52,8 @@ namespace AILinguistic
             {
                 Label = "Open",
                 LargeImage = LoadIcon(),
-                Command = new RelayCommand(OpenDockWindow, null)
+                // Use the embedded RelayCommand
+                Command = new RelayCommand(OpenDockWindow)
             };
 
             group.AddRibbonButton(buttonData);
@@ -61,61 +63,66 @@ namespace AILinguistic
         {
             try
             {
-                // Get the assembly containing the embedded resource
                 var assembly = Assembly.GetExecutingAssembly();
-                // Resource name: [Namespace].[Folder].[Filename]
-                string resourceName = "AILinguistic.Resources.app.png";
+                // Resource name: DefaultNamespace.FolderName.FileName
+                // Ensure 'Resources' folder exists and 'app.png' Build Action is 'Embedded Resource'
+                string resourceName = "AILinguistic.Resources.app.png"; 
 
                 using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
                     if (stream == null)
                     {
-                        ExceptionHandling.LogWarning("Icon not found");
-                        return new BitmapImage();
+                        // Make warning more specific
+                        ExceptionHandling.LogWarning($"Icon resource stream not found for: {resourceName}. Ensure the path is correct and Build Action is Embedded Resource.");
+                        return new BitmapImage(); // Return empty image on failure
                     }
 
                     var bitmap = new BitmapImage();
                     bitmap.BeginInit();
                     bitmap.StreamSource = stream;
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad; 
                     bitmap.EndInit();
-                    bitmap.Freeze();
+                    bitmap.Freeze(); // Make thread-safe for UI
                     return bitmap;
                 }
             }
             catch (Exception ex)
             {
-                ExceptionHandling.LogError($"Initialization failed : {ex}");
-                return new BitmapImage();
+                // Log the full exception for debugging
+                ExceptionHandling.LogError($"Failed to load icon resource '{resourceName}': {ex}");
+                return new BitmapImage(); // Return empty image on error
             }
-
         }
 
         private void OpenDockWindow()
         {
             if (_dockableWindow == null)
             {
-                _dockableWindow = new DockableWindow(_host);
+                _dockableWindow = new DockableWindow(_host); 
                 _dockableWindow.Closed += (s, e) => _dockableWindow = null;
             }
             _dockableWindow.Show();
+            _dockableWindow.Activate(); // Ensure the window gets focus
         }
 
         public void Execute()
         {
             _isActivated = true;
-
+            // Consider if showing the window here is needed depending on Flare's behavior
+            // OpenDockWindow(); 
         }
 
 
         public void Stop()
         {
-            // Clean up other resources
-            _host?.Dispose();
-            _dockableWindow?.Close();
+            // Check if IHost is IDisposable if API docs are available, otherwise remove Dispose call.
+            // Assuming it's not IDisposable for now.
+            // _host?.Dispose(); 
+            _dockableWindow?.Close(); // Close the window if open
             _isActivated = false;
         }
 
+        // Standard RelayCommand implementation 
         public class RelayCommand : ICommand
         {
             private readonly Action _execute;
@@ -123,16 +130,25 @@ namespace AILinguistic
 
             public RelayCommand(Action execute, Func<bool> canExecute = null)
             {
-                _execute = execute;
+                _execute = execute ?? throw new ArgumentNullException(nameof(execute));
                 _canExecute = canExecute;
             }
 
-            public event EventHandler CanExecuteChanged;
+            // Use CommandManager for automatic UI updates
+            public event EventHandler CanExecuteChanged
+            {
+                add { CommandManager.RequerySuggested += value; }
+                remove { CommandManager.RequerySuggested -= value; }
+            }
 
             public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
             public void Execute(object parameter) => _execute();
+
+            // Optional: Method to manually trigger CanExecuteChanged check if needed
+            public void RaiseCanExecuteChanged()
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
-
     }
-
 }
